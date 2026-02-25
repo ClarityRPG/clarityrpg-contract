@@ -28,8 +28,8 @@
 (define-constant err-hero-limit-reached       (err u513))
 (define-constant err-guild-not-found          (err u514))
 (define-constant err-already-in-guild         (err u515))
-(define-constant err-name-too-long            (err u516))
 (define-constant err-item-class-mismatch      (err u517))
+(define-constant err-unauthorized             (err u518))
 
 ;; ============================================================
 ;; CONSTANTS
@@ -44,10 +44,6 @@
 ;; XP awarded per battle outcome
 (define-constant xp-win-base   u50)
 (define-constant xp-loss       u10)
-(define-constant xp-draw       u25)
-
-;; Stat points awarded on level-up
-(define-constant stat-points-per-level u3)
 
 ;; ============================================================
 ;; DATA VARS
@@ -119,7 +115,7 @@
   winner:      uint,
   loser:       uint,
   xp-awarded:  uint,
-  block-height: uint
+  stacks-block-height: uint
 })
 
 ;; --- Guilds ---
@@ -241,7 +237,7 @@
 )
 
 ;; Pseudo-random number - NOT cryptographically secure, used for battle tie-break only.
-;; Uses a multiplicative hash of seed and block-height. Sufficient for game coin flips.
+;; Uses a multiplicative hash of seed and stacks-block-height. Sufficient for game coin flips.
 (define-private (pseudo-random (seed uint) (bh uint) (range uint))
   (mod (+ (* seed u6364136223846793005) (* bh u1442695040888963407)) range)
 )
@@ -301,7 +297,7 @@
     level:        u1,
     xp:           u0,
     xp-to-next:   (xp-for-next-level u1),
-    created-at:   block-height,
+    created-at:   stacks-block-height,
     battle-count: u0,
     win-count:    u0,
     loss-count:   u0,
@@ -457,7 +453,7 @@
     (def-rounds-survive (/ def-hp (if (> atk-damage u0) atk-damage u1)))
 
     ;; Tie-break via pseudo-random roll seeded by hero IDs
-    (coin-flip   (pseudo-random (+ attacker-id defender-id) block-height u2))
+    (coin-flip   (pseudo-random (+ attacker-id defender-id) stacks-block-height u2))
 
     ;; Determine winner / loser IDs
     (attacker-wins
@@ -476,7 +472,7 @@
   (asserts! (is-eq (get owner attacker) tx-sender) err-not-hero-owner)
   (asserts! (not (is-eq attacker-id defender-id))  err-self-battle)
   (asserts!
-    (>= block-height (+ (get last-battle attacker) battle-cooldown-blocks))
+    (>= stacks-block-height (+ (get last-battle attacker) battle-cooldown-blocks))
     err-on-cooldown)
 
   ;; Log battle
@@ -486,7 +482,7 @@
     winner:       winner-id,
     loser:        loser-id,
     xp-awarded:   xp-for-winner,
-    block-height: block-height
+    stacks-block-height: stacks-block-height
   })
   (var-set battle-nonce battle-id)
 
@@ -496,7 +492,7 @@
       xp:           (+ (get xp w-hero) xp-for-winner),
       battle-count: (+ (get battle-count w-hero) u1),
       win-count:    (+ (get win-count w-hero) u1),
-      last-battle:  block-height
+      last-battle:  stacks-block-height
     }))
   )
 
@@ -506,7 +502,7 @@
       xp:           (+ (get xp l-hero) xp-loss),
       battle-count: (+ (get battle-count l-hero) u1),
       loss-count:   (+ (get loss-count l-hero) u1),
-      last-battle:  block-height
+      last-battle:  stacks-block-height
     }))
   )
 
@@ -549,6 +545,37 @@
     member-count: (+ (get member-count guild) u1)
   }))
   (ok true))
+)
+
+;; --- mint-item ---
+;; Admin/Contract owner function to mint a new item into existence.
+;; (For a full game this would be dropped from PvE or crafted)
+(define-public (mint-item
+    (recipient       principal)
+    (name            (string-utf8 32))
+    (slot            (string-ascii 16))
+    (stat-bonus-type (string-ascii 16))
+    (stat-bonus-value uint)
+    (rarity          (string-ascii 16)))
+  (let (
+    (new-id (+ (var-get item-nonce) u1))
+  )
+  ;; Simplified: anyone can mint for now, or add an admin check
+  ;; (asserts! (is-eq tx-sender contract-owner) err-unauthorized)
+  
+  (asserts! (is-valid-slot slot) err-invalid-slot)
+  
+  (map-set items new-id {
+    name: name,
+    slot: slot,
+    stat-bonus-type: stat-bonus-type,
+    stat-bonus-value: stat-bonus-value,
+    rarity: rarity,
+    owner: recipient
+  })
+  
+  (var-set item-nonce new-id)
+  (ok new-id))
 )
 
 ;; ============================================================
@@ -636,7 +663,7 @@
 ;; Check if a hero is on battle cooldown
 (define-read-only (is-on-cooldown (hero-id uint))
   (match (map-get? heroes hero-id)
-    hero (< block-height (+ (get last-battle hero) battle-cooldown-blocks))
+    hero (< stacks-block-height (+ (get last-battle hero) battle-cooldown-blocks))
     false)
 )
 
