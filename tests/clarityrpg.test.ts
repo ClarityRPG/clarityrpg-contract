@@ -25,6 +25,7 @@ describe("ClarityRPG contract tests", () => {
         // Get hero sheet
         const getHeroResult = simnet.callReadOnlyFn("clarityrpg", "get-hero", [Cl.uint(1)], wallet1);
         const heroData: any = getHeroResult.result;
+        expect(heroData.type).toEqual("some"); // ClarityType.OptionalSome is serialized as 'some' in Clarinet JS SDK
         expect(heroData.value.data.name).toEqual(Cl.stringUtf8("Zephyros"));
         expect(heroData.value.data.class).toEqual(Cl.stringAscii("mage"));
         expect(heroData.value.data.level).toEqual(Cl.uint(1));
@@ -73,10 +74,10 @@ describe("ClarityRPG contract tests", () => {
         simnet.callPublicFn("clarityrpg", "increment", [], wallet1);
         simnet.callPublicFn("clarityrpg", "increment", [], wallet1);
         counter = simnet.callReadOnlyFn("clarityrpg", "get-counter", [], wallet1);
-        expect(counter.result).toBeOk(Cl.int(2));
+        expect(counter.result).toEqual(Cl.int(2));
 
         simnet.callPublicFn("clarityrpg", "decrement", [], wallet1);
         counter = simnet.callReadOnlyFn("clarityrpg", "get-counter", [], wallet1);
-        expect(counter.result).toBeOk(Cl.int(1));
+        expect(counter.result).toEqual(Cl.int(1));
     });
 });
