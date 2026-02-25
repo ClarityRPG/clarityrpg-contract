@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { Cl } from "@stacks/transactions";
+import { Cl, cvToJSON } from "@stacks/transactions";
 
 const accounts = simnet.getAccounts();
 const wallet1 = accounts.get("wallet_1")!;
-const wallet2 = accounts.get("wallet_2")!;
 
 describe("ClarityRPG contract tests", () => {
     it("ensures simnet is well initialised", () => {
@@ -24,11 +23,11 @@ describe("ClarityRPG contract tests", () => {
 
         // Get hero sheet
         const getHeroResult = simnet.callReadOnlyFn("clarityrpg", "get-hero", [Cl.uint(1)], wallet1);
-        const heroData: any = getHeroResult.result;
-        expect(heroData.type).toEqual("some"); // ClarityType.OptionalSome is serialized as 'some' in Clarinet JS SDK
-        expect(heroData.value.data.name).toEqual(Cl.stringUtf8("Zephyros"));
-        expect(heroData.value.data.class).toEqual(Cl.stringAscii("mage"));
-        expect(heroData.value.data.level).toEqual(Cl.uint(1));
+        const heroJson = cvToJSON(getHeroResult.result);
+
+        expect(heroJson.value.value.name.value).toEqual("Zephyros");
+        expect(heroJson.value.value.class.value).toEqual("mage");
+        expect(heroJson.value.value.level.value).toEqual("1");
 
         // Ensure another call by same wallet fails with hero limit reached (u513)
         const createResult2 = simnet.callPublicFn(
