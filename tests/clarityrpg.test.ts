@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { Cl } from "@stacks/transactions";
 
 const accounts = simnet.getAccounts();
 const wallet1 = accounts.get("wallet_1")!;
@@ -14,55 +15,55 @@ describe("ClarityRPG contract tests", () => {
             "clarityrpg",
             "create-hero",
             [
-                { type: "string-utf8", value: "Zephyros" },
-                { type: "string-ascii", value: "mage" }
+                Cl.stringUtf8("Zephyros"),
+                Cl.stringAscii("mage")
             ],
             wallet1
         );
-        expect(createResult.result).toBeOk(simnet.uint(1));
+        expect(createResult.result).toBeOk(Cl.uint(1));
 
         // Get hero sheet
-        const getHeroResult = simnet.callReadOnlyFn("clarityrpg", "get-hero", [simnet.uint(1)], wallet1);
+        const getHeroResult = simnet.callReadOnlyFn("clarityrpg", "get-hero", [Cl.uint(1)], wallet1);
         const heroData: any = getHeroResult.result;
-        expect(heroData.value.data.name).toEqual(simnet.utf8("Zephyros"));
-        expect(heroData.value.data.class).toEqual(simnet.ascii("mage"));
-        expect(heroData.value.data.level).toEqual(simnet.uint(1));
-        
+        expect(heroData.value.data.name).toEqual(Cl.stringUtf8("Zephyros"));
+        expect(heroData.value.data.class).toEqual(Cl.stringAscii("mage"));
+        expect(heroData.value.data.level).toEqual(Cl.uint(1));
+
         // Ensure another call by same wallet fails with hero limit reached (u513)
         const createResult2 = simnet.callPublicFn(
             "clarityrpg",
             "create-hero",
             [
-                { type: "string-utf8", value: "SecondHero" },
-                { type: "string-ascii", value: "warrior" }
+                Cl.stringUtf8("SecondHero"),
+                Cl.stringAscii("warrior")
             ],
             wallet1
         );
-        expect(createResult2.result).toBeErr(simnet.uint(513));
+        expect(createResult2.result).toBeErr(Cl.uint(513));
     });
 
     it("can allocate stat points", () => {
         // Create hero first
-        simnet.callPublicFn("clarityrpg", "create-hero", [{ type: "string-utf8", value: "Hero" }, { type: "string-ascii", value: "warrior" }], wallet1);
-        
+        simnet.callPublicFn("clarityrpg", "create-hero", [Cl.stringUtf8("Hero"), Cl.stringAscii("warrior")], wallet1);
+
         const allocateResult = simnet.callPublicFn(
             "clarityrpg",
             "allocate-stat-points",
             [
-                simnet.uint(1), // hero-id
-                simnet.uint(1), // str
-                simnet.uint(0), // dex
-                simnet.uint(0), // int
-                simnet.uint(2), // vit
-                simnet.uint(0)  // lck
+                Cl.uint(1), // hero-id
+                Cl.uint(1), // str
+                Cl.uint(0), // dex
+                Cl.uint(0), // int
+                Cl.uint(2), // vit
+                Cl.uint(0)  // lck
             ],
             wallet1
         );
-        expect(allocateResult.result).toBeOk(simnet.bool(true));
+        expect(allocateResult.result).toBeOk(Cl.bool(true));
 
         // Unallocated points should be 0 now
-        const unallocatedResult = simnet.callReadOnlyFn("clarityrpg", "get-unallocated-points", [simnet.uint(1)], wallet1);
-        expect(unallocatedResult.result).toBeSome(simnet.uint(0));
+        const unallocatedResult = simnet.callReadOnlyFn("clarityrpg", "get-unallocated-points", [Cl.uint(1)], wallet1);
+        expect(unallocatedResult.result).toBeSome(Cl.uint(0));
     });
 
     it("counter utility works for testing", () => {
@@ -72,10 +73,10 @@ describe("ClarityRPG contract tests", () => {
         simnet.callPublicFn("clarityrpg", "increment", [], wallet1);
         simnet.callPublicFn("clarityrpg", "increment", [], wallet1);
         counter = simnet.callReadOnlyFn("clarityrpg", "get-counter", [], wallet1);
-        expect(counter.result).toBeOk(simnet.int(2));
+        expect(counter.result).toBeOk(Cl.int(2));
 
         simnet.callPublicFn("clarityrpg", "decrement", [], wallet1);
         counter = simnet.callReadOnlyFn("clarityrpg", "get-counter", [], wallet1);
-        expect(counter.result).toBeOk(simnet.int(1));
+        expect(counter.result).toBeOk(Cl.int(1));
     });
 });
