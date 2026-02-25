@@ -240,12 +240,14 @@
     u0)
 )
 
-;; Pseudo-random number from block seed - NOT cryptographically secure, used for battle resolution
-(define-private (pseudo-random (seed uint) (range uint))
+;; Pseudo-random number - NOT cryptographically secure, used for battle resolution.
+;; Takes an explicit block-seed (block-height passed from caller) to avoid
+;; serializing builtin keywords inside private functions.
+(define-private (pseudo-random (seed uint) (bh uint) (range uint))
   (let (
     (block-seed (buff-to-uint-be (unwrap-panic (as-max-len? (sha256 (concat
         (unwrap-panic (to-consensus-buff? seed))
-        (unwrap-panic (to-consensus-buff? block-height))
+        (unwrap-panic (to-consensus-buff? bh))
     )) u32))))
   )
   (mod block-seed range))
@@ -462,7 +464,7 @@
     (def-rounds-survive (/ def-hp (if (> atk-damage u0) atk-damage u1)))
 
     ;; Tie-break via pseudo-random roll seeded by hero IDs
-    (coin-flip   (pseudo-random (+ attacker-id defender-id) u2))
+    (coin-flip   (pseudo-random (+ attacker-id defender-id) block-height u2))
 
     ;; Determine winner / loser IDs
     (attacker-wins
