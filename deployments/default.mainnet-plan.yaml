@@ -11,7 +11,7 @@ plan:
         - contract-publish:
             contract-name: clarityrpg
             expected-sender: SP1GNDB8SXJ51GBMSVVXMWGTPRFHGSMWNNBEY25A4
-            cost: 981397
+            cost: 241800
             path: contracts/clarityrpg.clar
             anchor-block-only: true
             clarity-version: 4
