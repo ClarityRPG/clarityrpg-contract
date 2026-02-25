@@ -240,17 +240,10 @@
     u0)
 )
 
-;; Pseudo-random number - NOT cryptographically secure, used for battle resolution.
-;; Takes an explicit block-seed (block-height passed from caller) to avoid
-;; serializing builtin keywords inside private functions.
+;; Pseudo-random number - NOT cryptographically secure, used for battle tie-break only.
+;; Uses a multiplicative hash of seed and block-height. Sufficient for game coin flips.
 (define-private (pseudo-random (seed uint) (bh uint) (range uint))
-  (let (
-    (block-seed (buff-to-uint-be (unwrap-panic (as-max-len? (sha256 (concat
-        (unwrap-panic (to-consensus-buff? seed))
-        (unwrap-panic (to-consensus-buff? bh))
-    )) u32))))
-  )
-  (mod block-seed range))
+  (mod (+ (* seed u6364136223846793005) (* bh u1442695040888963407)) range)
 )
 
 ;; Compute effective attack power for a hero: (STR * 3) + (DEX * 1) + weapon-bonus
